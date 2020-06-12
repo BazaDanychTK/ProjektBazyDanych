@@ -1,0 +1,681 @@
+DROP SEQUENCE KATEGORIE_SEQ;
+DROP SEQUENCE DOSTAWCY_SEQ;
+DROP SEQUENCE PRZEDMIOTY_SEQ;
+DROP SEQUENCE WYDANIA_SEQ;
+DROP SEQUENCE PRACOWNICY_SEQ;
+
+DROP TABLE KATEGORIE CASCADE CONSTRAINTS;
+DROP TABLE DOSTAWCY CASCADE CONSTRAINTS;
+DROP TABLE PRZEDMIOTY CASCADE CONSTRAINTS;
+DROP TABLE PRZEDMIOTY_DOSTAWCY CASCADE CONSTRAINTS;
+DROP TABLE PRZEDMIOTY_WYDANIA CASCADE CONSTRAINTS;
+DROP TABLE WYDANIA CASCADE CONSTRAINTS;
+DROP TABLE PRACOWNICY CASCADE CONSTRAINTS;
+
+DROP TRIGGER KATEGORIE_TRG;
+DROP TRIGGER DOSTAWCY_TRG;
+DROP TRIGGER PRZEDMIOTY_TRG;
+DROP TRIGGER PRACOWNICY_TRG;
+DROP TRIGGER WYDANIA_TRG;
+DROP TRIGGER WYDANIE;
+
+CREATE TABLE KATEGORIE(
+ID					NUMBER(10)NOT NULL,
+NAZWA				VARCHAR2(50)NOT NULL,
+PRIMARY KEY (ID)); 
+
+CREATE TABLE DOSTAWCY(
+ID					NUMBER(10)NOT NULL,
+NAZWA				VARCHAR2(50)NOT NULL,
+ADRES_EMAIL			VARCHAR2(50),
+TEL_KONTAKT			VARCHAR2(50)NOT NULL,
+STRONA_WWW			VARCHAR2(50),
+PRIMARY KEY (ID));
+
+CREATE TABLE PRZEDMIOTY(
+ID					NUMBER(10)NOT NULL,
+ID_KATEGORII		NUMBER(10)NOT NULL,
+NAZWA_PRZEDMIOTU	VARCHAR2(50)NOT NULL,
+ILOSC				NUMBER(10)NOT NULL,
+ZAPOTRZEBOWANIE		VARCHAR2(20) DEFAULT 'nie',
+PRIMARY KEY (ID));
+
+CREATE TABLE PRZEDMIOTY_DOSTAWCY(
+ID_PRZEDMIOTU		NUMBER(10)NOT NULL,
+ID_DOSTAWCY			NUMBER(10)NOT NULL);
+
+CREATE TABLE PRZEDMIOTY_WYDANIA(
+ID_PRZEDMIOTU		NUMBER(10)NOT NULL,
+ID_WYDANIA			NUMBER(10)NOT NULL,
+ILOSC				NUMBER(10)NOT NULL);
+
+CREATE TABLE WYDANIA(
+ID					NUMBER(10)NOT NULL,
+ID_PRACOWNIKA		NUMBER(10)NOT NULL,
+DATA				DATE NOT NULL,
+ILOSC_WYDANYCH		NUMBER(10) DEFAULT 0,
+PRIMARY KEY(ID));
+
+CREATE TABLE PRACOWNICY(
+ID					NUMBER(10)NOT NULL,
+IMIE				VARCHAR2(10)NOT NULL,
+NAZWISKO			VARCHAR2(30) NOT NULL,
+TEL_KONTAKT			VARCHAR2(30) NOT NULL,
+PRIMARY KEY(ID));
+
+ALTER TABLE PRZEDMIOTY ADD CONSTRAINT FK_KATEGORIE FOREIGN KEY (ID_KATEGORII) REFERENCES KATEGORIE (ID);
+
+ALTER TABLE PRZEDMIOTY_DOSTAWCY ADD CONSTRAINT FK_PRZEDMIOTY_DOST 	FOREIGN KEY (ID_PRZEDMIOTU) REFERENCES PRZEDMIOTY (ID);
+ALTER TABLE PRZEDMIOTY_DOSTAWCY ADD CONSTRAINT FK_DOSTAWCY_DOST	 	FOREIGN KEY (ID_DOSTAWCY)	 REFERENCES DOSTAWCY (ID);
+
+ALTER TABLE PRZEDMIOTY_WYDANIA ADD CONSTRAINT FK_PRZEDMIOTY_WYD FOREIGN KEY (ID_PRZEDMIOTU) REFERENCES PRZEDMIOTY (ID);
+ALTER TABLE PRZEDMIOTY_WYDANIA ADD CONSTRAINT FK_WYDANIA 		FOREIGN KEY (ID_WYDANIA) 	REFERENCES WYDANIA (ID);
+
+ALTER TABLE WYDANIA ADD CONSTRAINT FK_PRACOWNICY FOREIGN KEY (ID_PRACOWNIKA) REFERENCES PRACOWNICY (ID);
+
+CREATE SEQUENCE DOSTAWCY_SEQ;
+CREATE SEQUENCE KATEGORIE_SEQ;
+CREATE SEQUENCE PRACOWNICY_SEQ;
+CREATE SEQUENCE PRZEDMIOTY_SEQ;
+CREATE SEQUENCE WYDANIA_SEQ;
+
+create or replace TRIGGER DOSTAWCY_TRG 
+BEFORE INSERT ON DOSTAWCY 
+FOR EACH ROW 
+BEGIN
+  <<COLUMN_SEQUENCES>>
+  BEGIN
+    IF INSERTING AND :NEW.ID IS NULL THEN
+      SELECT DOSTAWCY_SEQ.NEXTVAL INTO :NEW.ID FROM SYS.DUAL;
+    END IF;
+  END COLUMN_SEQUENCES;
+END;
+/
+create or replace TRIGGER PRZEDMIOTY_TRG 
+BEFORE INSERT ON PRZEDMIOTY 
+FOR EACH ROW 
+BEGIN
+  <<COLUMN_SEQUENCES>>
+  BEGIN
+    IF INSERTING AND :NEW.ID IS NULL THEN
+      SELECT PRZEDMIOTY_SEQ.NEXTVAL INTO :NEW.ID FROM SYS.DUAL;
+    END IF;
+  END COLUMN_SEQUENCES;
+END;
+/
+CREATE TRIGGER PRACOWNICY_TRG 
+BEFORE INSERT ON PRACOWNICY 
+FOR EACH ROW 
+BEGIN
+  <<COLUMN_SEQUENCES>>
+  BEGIN
+    IF INSERTING AND :NEW.ID IS NULL THEN
+      SELECT PRACOWNICY_SEQ.NEXTVAL INTO :NEW.ID FROM SYS.DUAL;
+    END IF;
+  END COLUMN_SEQUENCES;
+END;
+/
+CREATE TRIGGER KATEGORIE_TRG 
+BEFORE INSERT ON KATEGORIE 
+FOR EACH ROW 
+BEGIN
+  <<COLUMN_SEQUENCES>>
+  BEGIN
+    IF INSERTING AND :NEW.ID IS NULL THEN
+      SELECT KATEGORIE_SEQ.NEXTVAL INTO :NEW.ID FROM SYS.DUAL;
+    END IF;
+  END COLUMN_SEQUENCES;
+END;
+/
+create or replace TRIGGER WYDANIA_TRG 
+BEFORE INSERT ON WYDANIA 
+FOR EACH ROW 
+BEGIN
+  <<COLUMN_SEQUENCES>>
+  BEGIN
+    IF INSERTING AND :NEW.ID IS NULL THEN
+      SELECT WYDANIA_SEQ.NEXTVAL INTO :NEW.ID FROM SYS.DUAL;
+    END IF;
+  END COLUMN_SEQUENCES;
+END;
+/
+create or replace TRIGGER WYDANIE 
+AFTER INSERT ON PRZEDMIOTY_WYDANIA 
+FOR EACH ROW
+BEGIN
+    IF(:new.ilosc > 0) THEN
+        UPDATE wydania
+          SET ilosc_wydanych = ilosc_wydanych + :new.ilosc where :new.id_wydania=id;
+        UPDATE przedmioty
+          SET ilosc = ilosc - :new.ilosc where :new.id_przedmiotu = id;
+    END IF;
+END;
+/
+create or replace type dostawca_z_emailem as object (
+nazwa VARCHAR(20),
+email VARCHAR(30));
+/
+create or replace type wydanie_dzien_ilosc as object (
+wyd_data DATE,
+wyd_ilosc INTEGER(30));
+/
+create or replace type DOSTAWCA_Z_EMAILEM_TAB as table of DOSTAWCA_Z_EMAILEM;
+/
+create or replace type wydanie_dzien_ilosc_tab as table of wydanie_dzien_ilosc;
+/
+create or replace FUNCTION DOSTAWCY_Z_EMAILEM
+    RETURN dostawca_z_emailem_tab 
+is
+return_value dostawca_z_emailem_tab;
+
+BEGIN
+    select dostawca_z_emailem(nazwa, adres_email)
+    bulk collect into return_value
+    from dostawcy WHERE adres_email is not null;
+    RETURN return_value;
+END;
+/
+create or replace FUNCTION LICZBA_WYDAN_PRACOWNIKOW 
+    RETURN SYS_REFCURSOR AS 
+    my_cursor SYS_REFCURSOR;
+BEGIN
+    OPEN my_cursor FOR 
+        SELECT pracownicy.id, pracownicy.imie, pracownicy.nazwisko, pracownicy.tel_kontakt, sum(wydania.ilosc_wydanych) ilosc 
+        from wydania 
+        JOIN pracownicy ON pracownicy.id = wydania.id_pracownika 
+        group by pracownicy.imie,pracownicy.nazwisko, pracownicy.tel_kontakt, pracownicy.id;
+    RETURN my_cursor;
+END;
+/
+create or replace FUNCTION TOP_X_PRACOWNIKOW(
+    ile IN NUMBER
+) RETURN SYS_REFCURSOR AS 
+    my_cursor SYS_REFCURSOR;
+BEGIN
+     OPEN my_cursor FOR 
+        select * from (SELECT pracownicy.id, pracownicy.imie, pracownicy.nazwisko, pracownicy.tel_kontakt, sum(wydania.ilosc_wydanych) ilosc 
+        from wydania 
+        JOIN pracownicy ON pracownicy.id = wydania.id_pracownika 
+        group by pracownicy.imie,pracownicy.nazwisko , pracownicy.tel_kontakt, pracownicy.id
+        order by ilosc 
+        desc )WHERE ROWNUM <= ile;
+    RETURN my_cursor;
+END;
+/
+create or replace FUNCTION WYKRES(
+od IN DATE,
+do IN DATE
+)
+    RETURN wydanie_dzien_ilosc_tab 
+is
+return_value wydanie_dzien_ilosc_tab;
+
+cursor c1 is select trunc(data), sum(ilosc_wydanych) from wydania group by trunc(data);
+BEGIN
+    select wydanie_dzien_ilosc(trunc(data), sum(wydania.ilosc_wydanych))
+    bulk collect into return_value
+    from wydania WHERE wydania.data >= trunc(od)
+        AND wydania.data <  trunc(do)+ .99999 GROUP BY trunc(data) ORDER BY trunc(data);
+    RETURN return_value;
+END;
+/
+create or replace FUNCTION WYKRES_DOMYSLNY
+    RETURN wydanie_dzien_ilosc_tab 
+is
+return_value wydanie_dzien_ilosc_tab;
+
+cursor c1 is select trunc(data), sum(ilosc_wydanych) from wydania group by trunc(data);
+BEGIN
+    select wydanie_dzien_ilosc(trunc(data), sum(wydania.ilosc_wydanych))
+    bulk collect into return_value
+    from wydania GROUP BY trunc(data) ORDER BY trunc(data);
+    RETURN return_value;
+END;
+/
+create or replace procedure A_ILOSC_PRACOWNIKOW is
+       cursor c_countEmps is select count(*) count from pracownicy;
+        r_testRec c_countEmps%ROWTYPE;
+    begin
+        open c_countEmps;
+            fetch c_countEmps into r_testRec;
+        close c_countEmps;
+        DBMS_OUTPUT.put_line('Liczba pracowników:'||r_testRec.count);
+ end;
+ /
+ create or replace PROCEDURE A_resetuj_sekwencje(
+p_nazwa_sekwencji IN VARCHAR2 )
+IS
+    l_val NUMBER;
+BEGIN
+    EXECUTE IMMEDIATE
+    'select ' || p_nazwa_sekwencji || '.nextval from dual' INTO l_val;
+
+    EXECUTE IMMEDIATE
+    'alter sequence ' || p_nazwa_sekwencji || ' increment by -' || l_val || ' minvalue 0';
+
+    EXECUTE IMMEDIATE
+    'select ' || p_nazwa_sekwencji || '.nextval from dual' INTO l_val;
+
+    EXECUTE IMMEDIATE
+    'alter sequence ' || p_nazwa_sekwencji || ' increment by 1 minvalue 0';
+END;
+/
+create or replace PROCEDURE AKTUALIZUJ_PRZEDMIOT_ILOSC(
+p_id_przedmiotu IN NUMBER,
+p_ilosc IN NUMBER,
+p_error OUT VARCHAR2)IS
+BEGIN
+       UPDATE przedmioty set ilosc = ilosc + p_ilosc where id=p_id_przedmiotu;
+END;
+/
+create or replace PROCEDURE ANALIZA_ZAPOTRZEBOWANIA
+(od IN DATE, 
+ do IN DATE,
+ pp OUT SYS_REFCURSOR) AS 
+TYPE przedmiot is RECORD(
+    id_p przedmioty.id%TYPE,
+    nazwa_p przedmioty.nazwa_przedmiotu%TYPE,
+    ilosc_p przedmioty.ilosc%TYPE,
+    zapotrz_p przedmioty.zapotrzebowanie%TYPE
+);
+ilosc_wydanych number;
+prz przedmiot;
+BEGIN
+  FOR pp in(select id from przedmioty) LOOP
+    select id,nazwa_przedmiotu,ilosc,zapotrzebowanie INTO prz from przedmioty where pp.id=id;
+
+    BEGIN
+        select sum(przedmioty_wydania.ilosc) INTO ilosc_wydanych from przedmioty_wydania
+        JOIN wydania on przedmioty_wydania.id_wydania = wydania.id
+        WHERE przedmioty_wydania.id_przedmiotu = prz.id_p and(wydania.data >= trunc(od)
+        AND wydania.data <  trunc(do)+ .99999)
+        group by przedmioty_wydania.id_przedmiotu;
+    EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        ilosc_wydanych:=0;
+    END;
+
+    IF ilosc_wydanych>prz.ilosc_p THEN
+        UPDATE przedmioty set zapotrzebowanie = 'tak' where id=pp.id;
+    ELSE
+        IF ilosc_wydanych=prz.ilosc_p THEN
+            UPDATE przedmioty set zapotrzebowanie = 'minimalny stan' where id=pp.id;
+        ELSE
+            UPDATE przedmioty set zapotrzebowanie = 'nie' where id=pp.id;
+        END IF;
+    END IF;
+  END LOOP;
+  open pp for select * from przedmioty;
+END;
+/
+create or replace PROCEDURE sprawdz_czy_mozna_wydac(
+p_id_przedmiotu IN NUMBER,
+p_ilosc IN NUMBER,
+p_czy_wydac OUT NUMBER)IS
+BEGIN
+DECLARE record_exists INTEGER;
+    BEGIN
+        SELECT ilosc INTO record_exists FROM przedmioty 
+        WHERE id = p_id_przedmiotu;
+        IF record_exists >= p_ilosc THEN
+            p_czy_wydac:=1;
+        ELSE
+            p_czy_wydac:=0;
+        END IF;
+    END;
+END;
+/
+create or replace PACKAGE USUN AS 
+    PROCEDURE dostawce(p_id IN NUMBER, crit_error_message OUT VARCHAR2);
+    PROCEDURE kategorie(p_id IN NUMBER, crit_error_message OUT VARCHAR2);
+    PROCEDURE pracownika(p_id IN NUMBER, crit_error_message OUT VARCHAR2);
+    PROCEDURE przedmiot(p_id IN NUMBER, crit_error_message OUT VARCHAR2);
+END;
+/
+create or replace PACKAGE BODY USUN IS
+
+    PROCEDURE dostawce(
+    p_id IN NUMBER,
+    crit_error_message OUT VARCHAR2)IS
+    BEGIN
+        DECLARE record_exists INTEGER;
+        BEGIN SELECT COUNT(*) INTO record_exists FROM przedmioty_dostawcy 
+        WHERE id_dostawcy = p_id AND ROWNUM = 1; 
+            IF record_exists = 1 THEN 
+                crit_error_message:='[Err] Nie można usunać, istnieje dostarczany przedmiot.';
+            ELSE 
+                DELETE FROM DOSTAWCY WHERE id = p_id;
+                    crit_error_message:='[Inf] Rekord pomyślnie usunięty';
+            END IF; 
+        END;
+    END;
+    
+    PROCEDURE kategorie(
+    p_id IN NUMBER,
+    crit_error_message OUT VARCHAR2)IS
+    BEGIN
+        DECLARE record_exists INTEGER;
+        BEGIN SELECT COUNT(*) INTO record_exists FROM PRZEDMIOTY 
+        WHERE id_kategorii = p_id AND ROWNUM = 1; 
+            IF record_exists = 1 THEN 
+                crit_error_message:='[Err] Nie można usunać, istnieje przedmiot przypisany do tej kategorii.';
+            ELSE 
+                DELETE FROM KATEGORIE WHERE id = p_id;
+                crit_error_message:='[Inf] Rekord pomyślnie usunięty';
+            END IF; 
+        END;
+    END;
+    
+    PROCEDURE pracownika(
+    p_id IN NUMBER,
+    crit_error_message OUT VARCHAR2)IS
+    BEGIN
+        DECLARE record_exists INTEGER;
+        BEGIN SELECT COUNT(*) INTO record_exists FROM wydania 
+        WHERE id_pracownika = p_id AND ROWNUM = 1; 
+            IF record_exists = 1 THEN 
+                crit_error_message:='[Err] Nie można usunać, istnieje wydanie z udzialem pracownika.';
+            ELSE 
+                DELETE FROM pracownicy WHERE id = p_id;
+                crit_error_message:='[Inf] Rekord pomyślnie usunięty';
+            END IF; 
+        END;
+    END;
+
+    PROCEDURE przedmiot(
+    p_id IN NUMBER,
+    crit_error_message OUT VARCHAR2)IS
+    BEGIN
+        DECLARE record_exists INTEGER;
+        BEGIN SELECT COUNT(*) INTO record_exists FROM przedmioty_wydania
+        WHERE id_przedmiotu = p_id AND ROWNUM = 1; 
+            IF record_exists = 1 THEN 
+                crit_error_message:='[Err] Nie można usunać, istnieje historia wydania tego przedmiotu.';
+            ELSE 
+                DELETE FROM przedmioty_dostawcy WHERE id_przedmiotu = p_id;
+                DELETE FROM PRZEDMIOTY WHERE id = p_id;
+                crit_error_message:='[Inf] Rekord pomyślnie usunięty';
+            END IF; 
+        END;
+    END;
+END;
+/
+create or replace PACKAGE DODAJ AS 
+    PROCEDURE KATEGORIA(p_nazwa IN VARCHAR, crit_error_message OUT VARCHAR2);
+    PROCEDURE WYDANIE(p_id_prac IN NUMBER, p_id_przedmiotu IN NUMBER, p_ilosc IN NUMBER, crit_error_message OUT VARCHAR2);
+    PROCEDURE DOSTAWCA(p_nazwa IN VARCHAR2, p_adres_email IN VARCHAR2, p_tel_kontaktowy IN VARCHAR2, p_strona_www IN VARCHAR2, crit_error_message OUT VARCHAR2);
+    PROCEDURE PRACOWNIK(p_imie IN VARCHAR2, p_nazwisko IN VARCHAR2, p_tel IN VARCHAR2, crit_error_message OUT VARCHAR2);
+    PROCEDURE PRZEDMIOT( p_nazwa IN VARCHAR2, p_ilosc IN NUMBER, p_id_kat IN NUMBER, p_id_dostawcy IN NUMBER, crit_error_message OUT VARCHAR2);
+END;
+/
+create or replace PACKAGE BODY DODAJ IS
+
+    PROCEDURE KATEGORIA(
+    p_nazwa IN VARCHAR,
+    crit_error_message OUT VARCHAR2) IS
+    BEGIN
+        IF p_nazwa is not null THEN
+            DECLARE record_exists INTEGER;
+            BEGIN SELECT COUNT(*) INTO record_exists FROM kategorie 
+            WHERE nazwa = p_nazwa AND ROWNUM = 1; 
+                IF record_exists = 1 THEN 
+                    crit_error_message:='[Err] Podana kategoria już istnieje.';
+                ELSE 
+                    INSERT INTO kategorie (nazwa) VALUES (p_nazwa);
+                    crit_error_message:='[Inf] Kategoria dodana.';
+                END IF; 
+            END;
+        ELSE
+            crit_error_message:='[Err] Nie podano nazwy';
+        END IF;
+    END;
+
+    PROCEDURE WYDANIE(
+    p_id_prac IN NUMBER,
+    p_id_przedmiotu IN NUMBER,
+    p_ilosc IN NUMBER,
+    crit_error_message OUT VARCHAR2) IS
+    BEGIN
+        IF p_ilosc = 0 THEN
+            crit_error_message:='[Err] Nie można wydać niczego.';
+        ELSE
+            if p_id_prac is not null THEN
+                if p_id_przedmiotu is not null THEN
+                    DECLARE
+                    l_id NUMBER;
+                    id_rek INTEGER;
+                    record_exists INTEGER;
+                    id_przed_wyd INTEGER;
+                    czy_wydac INTEGER;
+                    BEGIN
+                    sprawdz_czy_mozna_wydac(p_id_przedmiotu,p_ilosc,czy_wydac);
+                    SELECT COUNT(*) INTO record_exists FROM wydania 
+                    WHERE to_char(wydania.data)=to_char(SYSDATE) AND p_id_prac = wydania.id_pracownika AND ROWNUM = 1;
+                    IF czy_wydac = 1 THEN    
+                        IF record_exists = 1 THEN
+                            SELECT id INTO id_rek FROM wydania 
+                            WHERE to_char(wydania.data)=to_char(SYSDATE) AND p_id_prac = wydania.id_pracownika AND ROWNUM = 1;  
+                            record_exists:=0;
+                            SELECT COUNT(*) INTO record_exists FROM przedmioty_wydania 
+                            WHERE id_przedmiotu = p_id_przedmiotu AND id_wydania = id_rek AND ROWNUM = 1;
+                            IF record_exists = 1 THEN
+                                UPDATE przedmioty_wydania
+                                SET ilosc = ilosc+p_ilosc
+                                WHERE id_przedmiotu = p_id_przedmiotu AND id_wydania = id_rek;
+                                    UPDATE wydania
+                                    SET ilosc_wydanych = ilosc_wydanych + p_ilosc WHERE id=id_rek;
+                                    UPDATE przedmioty
+                                    SET ilosc = ilosc - p_ilosc where p_id_przedmiotu = id;
+                            ELSE
+                                INSERT INTO przedmioty_wydania(id_przedmiotu, id_wydania,ilosc)
+                                VALUES (p_id_przedmiotu,id_rek,p_ilosc);  
+                                crit_error_message:='[Inf] Rekord dopisany do dzisiejszego wydania';
+                            END if;
+                        ELSE
+                            INSERT INTO wydania(id_pracownika,data,ilosc_wydanych)
+                            VALUES (p_id_prac,SYSDATE,0) RETURNING id INTO l_id;
+
+                            INSERT INTO przedmioty_wydania(id_przedmiotu, id_wydania,ilosc)
+                            VALUES (p_id_przedmiotu,l_id,p_ilosc);
+                            crit_error_message:='[Inf] Nowe wydanie utworzone';
+                        END IF;
+                    ELSE
+                        crit_error_message:='[Err] W magazynie nie ma tylu przedmiotów';
+                    END IF;
+
+                   END;
+                ELSE
+                    crit_error_message:='[Err] Nie wybrano przedmiotu';
+                END IF;
+            ELSE
+                crit_error_message:='[Err] Nie wybrano pracownika';
+            END IF;
+        END IF;
+    END;    
+
+    PROCEDURE DOSTAWCA(
+    p_nazwa IN VARCHAR2, 
+    p_adres_email IN VARCHAR2, 
+    p_tel_kontaktowy IN VARCHAR2, 
+    p_strona_www IN VARCHAR2,
+    crit_error_message OUT VARCHAR2) IS
+    BEGIN
+        DECLARE record_exists INTEGER;
+        BEGIN SELECT COUNT(*) INTO record_exists FROM dostawcy 
+        WHERE nazwa = p_nazwa AND ROWNUM = 1; 
+            IF record_exists = 1 THEN
+                crit_error_message:='[Err] Taki dostawca już istnieje';
+            ELSE
+                IF p_nazwa is not null THEN 
+                    IF p_tel_kontaktowy is not null THEN 
+                        IF REGEXP_LIKE (p_tel_kontaktowy, '(^[0-9]{3} {1}[0-9]{3} {1}[0-9]{3}$)') THEN 
+                            IF p_adres_email is not null THEN 
+                                IF REGEXP_LIKE (p_adres_email, '^[A-Za-z]+[A-Za-z0-9.]+@{1}[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$') THEN 
+                                    IF p_strona_www is not null THEN 
+                                        IF REGEXP_LIKE (p_strona_www, '^w{3}\.{1}[a-z]+\.{1}[a-z]{2,4}$') THEN 
+                                            INSERT INTO dostawcy(nazwa, adres_email, tel_kontakt, strona_www)
+                                            VALUES (p_nazwa, p_adres_email, p_tel_kontaktowy, p_strona_www);
+                                        ELSE 
+                                            crit_error_message:=crit_error_message||'[Err] WWW niepoprawny, wymagany format: www.nazwastrony.pl' || chr(10);
+                                        END IF;
+                                    ELSE 
+                                        INSERT INTO dostawcy(nazwa, adres_email, tel_kontakt, strona_www)
+                                        VALUES (p_nazwa, p_adres_email, p_tel_kontaktowy, p_strona_www);
+                                    END IF; 
+                                ELSE 
+                                    crit_error_message:=crit_error_message||'[Err] E-mail niepoprawny, wymagany format: aba@nazwa.pl'|| chr(10);
+                                END IF;
+                            ELSE 
+                                crit_error_message:='[Err] Adres E-mail nie podany';
+                            END IF;
+                        ELSE 
+                            crit_error_message:='[Err] Numer telefonu niepoprawny, wymagany format: 111 222 333';
+                        END IF;
+                    ELSE 
+                        crit_error_message:=crit_error_message||'[Err] Numer telefonu niepodany'|| chr(10);
+                    END IF;
+                ELSE 
+                    crit_error_message:='[Err] Nazwa dostawcy nie podana';
+                END IF;
+            END IF;
+        END;
+    END;    
+
+    PROCEDURE PRACOWNIK( 
+    p_imie IN VARCHAR2,
+    p_nazwisko IN VARCHAR2,
+    p_tel IN VARCHAR2,
+    crit_error_message OUT VARCHAR2) IS
+    BEGIN
+        IF p_imie is null THEN
+            crit_error_message:='[Err] Nie podano imienia.';
+        ELSE
+            DECLARE record_exists INTEGER;
+            BEGIN SELECT COUNT(*) INTO record_exists FROM pracownicy 
+            WHERE imie = p_imie AND nazwisko = p_nazwisko AND ROWNUM = 1; 
+                IF record_exists = 1 THEN 
+                    crit_error_message:='[Err] Podany pracownik już istnieje.';
+                ELSE 
+                    IF p_tel is not null THEN
+                        IF REGEXP_LIKE (p_tel, '(^[0-9]{3} {1}[0-9]{3} {1}[0-9]{3}$)') THEN 
+                            if p_imie is not null then
+                                if p_nazwisko is not null then
+                                    INSERT INTO pracownicy(imie,nazwisko,tel_kontakt)
+                                    VALUES (p_imie,p_nazwisko,p_tel);
+                                else
+                                    crit_error_message:='[Err] Nazwisko nie podane';
+                                end if;
+                            else
+                                crit_error_message:='[Err] Imię nie podane';
+                            end if;
+                        ELSE 
+                            crit_error_message:='[Err] Numer telefonu niepoprawny, wymagany format: 111 222 333';
+                        END IF;
+                    ELSE
+                        crit_error_message:='[Err] Numer telefonu niepodany';
+                    END IF;
+                END IF; 
+            END;
+        END IF;
+      NULL;
+    END; 
+
+    PROCEDURE PRZEDMIOT(
+    p_nazwa IN VARCHAR2,
+    p_ilosc IN NUMBER,
+    p_id_kat IN NUMBER,
+    p_id_dostawcy IN NUMBER,
+    crit_error_message OUT VARCHAR2) IS
+    BEGIN
+        IF p_nazwa is null THEN
+            crit_error_message:='[Err] Nie podano nazwy.';
+        ELSE
+            IF p_id_kat is not null THEN
+                IF p_id_dostawcy is not null THEN
+                    DECLARE
+                    l_id NUMBER;
+                    BEGIN
+                        INSERT INTO przedmioty(id_kategorii, nazwa_przedmiotu, ilosc)
+                        VALUES (p_id_kat, p_nazwa, p_ilosc) RETURNING id INTO l_id;
+
+                        INSERT INTO przedmioty_dostawcy(id_przedmiotu, id_dostawcy)
+                        VALUES (l_id,p_id_dostawcy);
+                    END;
+                ELSE
+                    crit_error_message:='[Err] Nie podano dostawcy';
+                END IF;
+            ELSE
+                crit_error_message:='[Err] Nie podano kategorii';
+            END IF;
+        END IF;
+    END;
+
+END;
+
+
+
+
+INSERT INTO "HR"."DOSTAWCY" (NAZWA, ADRES_EMAIL, TEL_KONTAKT, STRONA_WWW) VALUES ('Ngine', 'ngine@ngine.eu', '543654234', 'www.ngine.eu');
+INSERT INTO "HR"."DOSTAWCY" (NAZWA, ADRES_EMAIL, TEL_KONTAKT, STRONA_WWW) VALUES ('Tiger', 'tiger@tiger.pl', '234543234', 'www.tiger.pl');
+INSERT INTO "HR"."DOSTAWCY" (NAZWA, ADRES_EMAIL, TEL_KONTAKT, STRONA_WWW) VALUES ('Prince Polo', 'biuropolo@polo.pl', '123757978', 'www.polo.pl');
+INSERT INTO "HR"."DOSTAWCY" (NAZWA, ADRES_EMAIL, TEL_KONTAKT, STRONA_WWW) VALUES ('Orbit', 'orbit@orbit.pl', '675436655', 'www.orbit.pl');
+
+INSERT INTO "HR"."PRACOWNICY" (IMIE, NAZWISKO, TEL_KONTAKT) VALUES ('Maciej', 'Malinowski', '504394394');
+INSERT INTO "HR"."PRACOWNICY" (IMIE, NAZWISKO, TEL_KONTAKT) VALUES ('Łukasz', 'Harabin', '938473892');
+INSERT INTO "HR"."PRACOWNICY" (IMIE, NAZWISKO, TEL_KONTAKT) VALUES ('Mateusz', 'Kopacz', '323423534');
+INSERT INTO "HR"."PRACOWNICY" (IMIE, NAZWISKO, TEL_KONTAKT) VALUES ('Emanuel', 'Kak', '938382383');
+INSERT INTO "HR"."PRACOWNICY" (IMIE, NAZWISKO, TEL_KONTAKT) VALUES ('Marcin', 'Klomb', '382373273');
+
+INSERT INTO "HR"."KATEGORIE" (NAZWA) VALUES ('Napoje');
+INSERT INTO "HR"."KATEGORIE" (NAZWA) VALUES ('Gumy');
+INSERT INTO "HR"."KATEGORIE" (NAZWA) VALUES ('Batony');
+INSERT INTO "HR"."KATEGORIE" (NAZWA) VALUES ('Cukierki');
+
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('2','Gumy orbit - miętowe', '50');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('2','Gumy orbit - cytrynowe', '50');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('2','Gumy orbit - truskawkowe', '50');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('4','Pastylki orbit', '30');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('1','Ngine', '20');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('1','Ngine - mojito', '10');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('1','Tiger', '20');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('1','Tiger - Red Power', '15');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('3','Prince Polo - czekoladowe', '50');
+INSERT INTO "HR"."PRZEDMIOTY" (ID_KATEGORII,NAZWA_PRZEDMIOTU, ILOSC) VALUES ('3','Prince Polo - kokosowe', '50');
+
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('1', '4');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('2', '4');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('3', '4');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('4', '4');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('5', '1');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('6', '1');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('7', '2');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('8', '2');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('9', '3');
+INSERT INTO "HR"."PRZEDMIOTY_DOSTAWCY" (ID_PRZEDMIOTU, ID_DOSTAWCY) VALUES ('10', '3');
+
+INSERT INTO "HR"."WYDANIA" (ID_PRACOWNIKA, DATA) VALUES ('1', TO_DATE('2019-05-08 12:42:04', 'YYYY-MM-DD HH24:MI:SS'));
+INSERT INTO "HR"."WYDANIA" (ID_PRACOWNIKA, DATA) VALUES ('1', TO_DATE('2019-05-09 12:42:16', 'YYYY-MM-DD HH24:MI:SS'));
+INSERT INTO "HR"."WYDANIA" (ID_PRACOWNIKA, DATA) VALUES ('2', TO_DATE('2019-05-11 12:42:28', 'YYYY-MM-DD HH24:MI:SS'));
+INSERT INTO "HR"."WYDANIA" (ID_PRACOWNIKA, DATA) VALUES ('3', TO_DATE('2019-05-01 12:42:33', 'YYYY-MM-DD HH24:MI:SS'));
+INSERT INTO "HR"."WYDANIA" (ID_PRACOWNIKA, DATA) VALUES ('4', TO_DATE('2019-05-12 12:42:44', 'YYYY-MM-DD HH24:MI:SS'));
+
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('9', '1', '2');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('10', '1', '1');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('3', '2', '1');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('7', '2', '1');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('6', '3', '1');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('1', '3', '2');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('10', '3', '2');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('1', '4', '10');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('2', '4', '10');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('3', '4', '10');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('4', '4', '10');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('9', '4', '10');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('10', '4', '10');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('5', '5', '1');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('7', '5', '1');
+INSERT INTO "HR"."PRZEDMIOTY_WYDANIA" (ID_PRZEDMIOTU, ID_WYDANIA, ILOSC) VALUES ('10', '5', '1');
+
+
+exec nowydostawca('Łukasz','alkatrax@o2.pl','', 'www.jazon.pl');
+

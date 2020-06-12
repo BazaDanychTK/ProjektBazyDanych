@@ -1,0 +1,3 @@
+Dane do bazy danych:
+Login: hr
+Haslo: hr

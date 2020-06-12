@@ -1,0 +1,51 @@
+CREATE OR REPLACE PROCEDURE ANALIZA_ZAPOTRZEBOWANIA
+(
+od IN DATE, 
+do IN DATE,
+pp OUT SYS_REFCURSOR)
+AS 
+TYPE przedmiot is RECORD(
+    id_p przedmioty.id%TYPE,
+    nazwa_p przedmioty.nazwa_przedmiotu%TYPE,
+    ilosc_p przedmioty.ilosc%TYPE,
+    zapotrz_p przedmioty.zapotrzebowanie%TYPE
+);
+ilosc_wydanych number;
+prz przedmiot;
+BEGIN
+
+  FOR pp in(select id from przedmioty) LOOP
+  
+    select id,nazwa_przedmiotu,ilosc,zapotrzebowanie INTO prz from przedmioty where pp.id=id;
+dbms_output.put_line(1); 
+BEGIN
+    select sum(przedmioty_wydania.ilosc) INTO ilosc_wydanych from przedmioty_wydania
+        JOIN wydania on przedmioty_wydania.id_wydania = wydania.id
+        WHERE przedmioty_wydania.id_przedmiotu = prz.id_p and(wydania.data >= TRUNC(TO_DATE('19/05/21'))
+        AND wydania.data <  TRUNC(TO_DATE('19/05/23')) + .99999)
+        group by przedmioty_wydania.id_przedmiotu;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+dbms_output.put_line('error'); 
+ilosc_wydanych:=0;
+END;
+       dbms_output.put_line(prz.id_p ||' '|| ilosc_wydanych ||' '|| prz.ilosc_p); 
+       dbms_output.put_line(2); 
+        IF ilosc_wydanych>prz.ilosc_p THEN
+            UPDATE przedmioty set zapotrzebowanie = 'tak' where id=pp.id;
+        ELSE
+            IF ilosc_wydanych=prz.ilosc_p THEN
+                UPDATE przedmioty set zapotrzebowanie = 'minimalny stan' where id=pp.id;
+            ELSE
+                UPDATE przedmioty set zapotrzebowanie = 'nie' where id=pp.id;
+            END IF;
+        END IF;
+  END LOOP;
+  open pp for
+  select * from przedmioty;
+
+END ANALIZA_ZAPOTRZEBOWANIA;
+
+
+
+

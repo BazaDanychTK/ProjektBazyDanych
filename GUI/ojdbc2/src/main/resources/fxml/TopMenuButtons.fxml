@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.TopMenuButtonsController">
+   <children>
+      <VBox spacing="1">
+         <children>
+            <ToggleButton mnemonicParsing="false" onAction="#openUslugi" prefHeight="30.0" prefWidth="180.0" text="Usługi">
+               <toggleGroup>
+                  <ToggleGroup fx:id="menu" />
+               </toggleGroup>
+            </ToggleButton>
+            <ToggleButton mnemonicParsing="false" onAction="#openKlienci" prefHeight="30.0" prefWidth="180.0" text="Klienci" toggleGroup="$menu" />
+            <ToggleButton mnemonicParsing="false" onAction="#openUmowy" prefHeight="30.0" prefWidth="180.0" text="Umowy" toggleGroup="$menu" />
+         </children>
+      </VBox>
+   </children>
+</StackPane>

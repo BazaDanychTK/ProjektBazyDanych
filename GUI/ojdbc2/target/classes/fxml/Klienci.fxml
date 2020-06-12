@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ContextMenu?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="650.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.KlienciController">
+   <children>
+      <GridPane maxHeight="-Infinity" minHeight="-Infinity" prefHeight="150.0" prefWidth="992.0">
+        <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="10.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="10.0" prefWidth="220.0" />
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="10.0" prefWidth="100.0" />
+          <ColumnConstraints hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="10.0" prefWidth="220.0" />
+          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        </columnConstraints>
+        <rowConstraints>
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        </rowConstraints>
+         <children>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Imie" GridPane.halignment="RIGHT">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Ulica" GridPane.columnIndex="2" GridPane.halignment="RIGHT">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Miejscowosc" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="3">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Nr.mieszkania" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="1">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Kod pocztowy" GridPane.halignment="RIGHT" GridPane.rowIndex="2">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Nazwisko" GridPane.halignment="RIGHT" GridPane.rowIndex="1">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <TextField fx:id="txtImie" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="1" />
+            <TextField fx:id="txtMieszkanie" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+            <TextField fx:id="txtUlica" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="3" />
+            <TextField fx:id="txtMiejscowosc" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+            <TextField fx:id="txtKod" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+            <TextField fx:id="txtNazwisko" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Button mnemonicParsing="false" onAction="#dodajKlienta" prefHeight="25.0" prefWidth="406.0" text="Dodaj nowego klienta" GridPane.columnIndex="4" />
+            <Text fx:id="infoTxt" strokeType="OUTSIDE" strokeWidth="0.0" wrappingWidth="354.0" GridPane.columnIndex="4" GridPane.rowIndex="1" />
+            <TextField fx:id="txtTelefon" maxWidth="-Infinity" prefWidth="200.0" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+            <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Nr telefonu" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="2">
+               <GridPane.margin>
+                  <Insets right="10.0" />
+               </GridPane.margin>
+            </Text>
+            <Button mnemonicParsing="false" onAction="#dodajMiejscowosc" prefHeight="25.0" prefWidth="138.0" text="Dodaj miejscowość" GridPane.columnIndex="4" GridPane.rowIndex="3" />
+         </children>
+         <padding>
+            <Insets bottom="10.0" top="10.0" />
+         </padding>
+      </GridPane>
+      <TableView fx:id="tabelaKlientow" maxWidth="1.7976931348623157E308" prefHeight="394.0" prefWidth="990.0" VBox.vgrow="ALWAYS">
+        <columns>
+          <TableColumn fx:id="imieCol" prefWidth="159.0" text="Imie" />
+          <TableColumn fx:id="nazwiskoCol" prefWidth="145.0" text="Nazwisko" />
+            <TableColumn fx:id="miejscowoscCol" minWidth="6.0" prefWidth="142.0" text="Miejscowosc" />
+            <TableColumn fx:id="kodCol" prefWidth="105.0" text="Kod" />
+            <TableColumn fx:id="ulicaCol" prefWidth="179.0" text="Ulica" />
+            <TableColumn fx:id="mieszkanieCol" prefWidth="77.0" text="Mieszkanie" />
+            <TableColumn fx:id="telefonCol" prefWidth="182.0" text="Telefon" />
+        </columns>
+         <contextMenu>
+            <ContextMenu>
+              <items>
+                <MenuItem mnemonicParsing="false" onAction="#usunKlienta" text="Usun klienta" />
+              </items>
+            </ContextMenu>
+         </contextMenu>
+      </TableView>
+   </children>
+   <padding>
+      <Insets bottom="10.0" right="10.0" />
+   </padding>
+</VBox>
